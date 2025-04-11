@@ -9,6 +9,7 @@ from gui.ui_abstract_component import AbstractComponentUI
 from gui.ui_components_html import GradioComponentsHTML
 from shortGPT.audio.edge_voice_module import EdgeTTSVoiceModule
 from shortGPT.audio.eleven_voice_module import ElevenLabsVoiceModule
+from shortGPT.audio.tiktok_voice_module import TikTokVoiceModule
 from shortGPT.config.api_db import ApiKeyManager
 from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
                                        ELEVEN_SUPPORTED_LANGUAGES,
@@ -30,7 +31,7 @@ class ShortAutomationUI(AbstractComponentUI):
                 short_type = gr.Radio(["Reddit Story shorts", "Historical Facts shorts", "Scientific Facts shorts", "Custom Facts shorts"], label="Type of shorts generated", value="Reddit Story shorts", interactive=True)
                 facts_subject = gr.Textbox(label="Write a subject for your facts (example: Football facts)", interactive=True, visible=False)
                 short_type.change(lambda x: gr.update(visible=x == "Custom Facts shorts"), [short_type], [facts_subject])
-                tts_engine = gr.Radio([AssetComponentsUtils.ELEVEN_TTS, AssetComponentsUtils.EDGE_TTS], label="Text to speech engine", value=AssetComponentsUtils.EDGE_TTS, interactive=True)
+                tts_engine = gr.Radio([AssetComponentsUtils.ELEVEN_TTS, AssetComponentsUtils.EDGE_TTS, 'TikTok TTS'], label="Text to speech engine", value=AssetComponentsUtils.EDGE_TTS, interactive=True)
                 self.tts_engine = tts_engine.value
                 with gr.Column(visible=False) as eleven_tts:
                     language_eleven = gr.Radio([lang.value for lang in ELEVEN_SUPPORTED_LANGUAGES], label="Language", value="English", interactive=True)
@@ -90,6 +91,9 @@ class ShortAutomationUI(AbstractComponentUI):
             elif tts_engine == AssetComponentsUtils.EDGE_TTS:
                 language = Language(language_edge.lower().capitalize())
                 voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[language]['male'])
+            elif tts_engine == 'TikTok TTS':
+                language = Language('English')  # Default language for TikTok TTS
+                voice_module = TikTokVoiceModule('en_us_001')  # Example TikTok voice
             for i in range(numShorts):
                 shortEngine = self.create_short_engine(short_type=short_type, voice_module=voice_module, language=language, numImages=numImages, watermark=watermark,
                                                        background_video=background_videos[i], background_music=background_musics[i], facts_subject=facts_subject)
@@ -145,7 +149,8 @@ class ShortAutomationUI(AbstractComponentUI):
 
         openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
         gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-        if not openai_key and not gemini_key:
+        openrouter_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
+        if not openai_key and not gemini_key and not openrouter_key:
             raise gr.Error("GEMINI OR OPENAI API key is missing. Please go to the config tab and enter the API key.")
         eleven_labs_key = ApiKeyManager.get_api_key("ELEVENLABS_API_KEY")
         if self.tts_engine == AssetComponentsUtils.ELEVEN_TTS and not eleven_labs_key:

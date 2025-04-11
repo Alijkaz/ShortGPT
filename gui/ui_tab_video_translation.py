@@ -9,6 +9,7 @@ from gui.ui_abstract_component import AbstractComponentUI
 from gui.ui_components_html import GradioComponentsHTML
 from shortGPT.audio.edge_voice_module import EdgeTTSVoiceModule
 from shortGPT.audio.eleven_voice_module import ElevenLabsVoiceModule
+from shortGPT.audio.tiktok_voice_module import TikTokVoiceModule
 from shortGPT.config.api_db import ApiKeyManager
 from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
                                        ELEVEN_SUPPORTED_LANGUAGES,
@@ -32,7 +33,7 @@ class VideoTranslationUI(AbstractComponentUI):
                 video_path = gr.Video(sources="upload", interactive=True, width=533.33, height=300, visible=False)
                 yt_link = gr.Textbox(label="Youtube link (https://youtube.com/xyz): ", interactive=True, visible=False)
                 videoType.change(lambda x: (gr.update(visible=x == "Video file"), gr.update(visible=x == "Youtube link")), [videoType], [video_path, yt_link])
-                tts_engine = gr.Radio([AssetComponentsUtils.ELEVEN_TTS, AssetComponentsUtils.EDGE_TTS], label="Text to speech engine", value=AssetComponentsUtils.EDGE_TTS, interactive=True)
+                tts_engine = gr.Radio([AssetComponentsUtils.ELEVEN_TTS, AssetComponentsUtils.EDGE_TTS, 'TikTok TTS'], label="Text to speech engine", value=AssetComponentsUtils.EDGE_TTS, interactive=True)
                 with gr.Column(visible=False) as eleven_tts:
                     language_eleven = gr.CheckboxGroup(self.eleven_language_choices, label="Language", value="ENGLISH", interactive=True)
                     voice_eleven = AssetComponentsUtils.voiceChoiceTranslation(provider=AssetComponentsUtils.ELEVEN_TTS)
@@ -61,6 +62,8 @@ class VideoTranslationUI(AbstractComponentUI):
             languages = [Language(lang.lower().capitalize()) for lang in language_eleven]
         elif tts_engine == AssetComponentsUtils.EDGE_TTS:
             languages = [Language(lang.lower().capitalize()) for lang in language_edge]
+        elif tts_engine == 'TikTok TTS':
+            languages = [Language('English')]  # Example language for TikTok TTS
 
         try:
             for i, language in enumerate(languages):
@@ -68,6 +71,8 @@ class VideoTranslationUI(AbstractComponentUI):
                     voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[language]['male'])
                 if tts_engine == AssetComponentsUtils.ELEVEN_TTS:
                     voice_module = ElevenLabsVoiceModule(ApiKeyManager.get_api_key('ELEVENLABS_API_KEY'), voice_eleven, checkElevenCredits=True)
+                if tts_engine == 'TikTok TTS':
+                    voice_module = TikTokVoiceModule('US_MALE_1')  # Example TikTok voice
                 content_translation_engine = MultiLanguageTranslationEngine(voiceModule=voice_module, src_url=yt_link if videoType == "Youtube link" else video_path, target_language=language, use_captions=use_captions)
                 num_steps = content_translation_engine.get_total_steps()
                 def logger(prog_str):

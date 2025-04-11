@@ -9,6 +9,7 @@ from gui.ui_abstract_component import AbstractComponentUI
 from gui.ui_components_html import GradioComponentsHTML
 from shortGPT.audio.edge_voice_module import EdgeTTSVoiceModule
 from shortGPT.audio.eleven_voice_module import ElevenLabsVoiceModule
+from shortGPT.audio.tiktok_voice_module import TikTokVoiceModule
 from shortGPT.config.api_db import ApiKeyManager
 from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
                                         ELEVEN_SUPPORTED_LANGUAGES,
@@ -50,8 +51,9 @@ class VideoAutomationUI(AbstractComponentUI):
     def is_key_missing(self):
         openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
         gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-        if not openai_key and not gemini_key:
-            return "Your Genmini or OpenAI key is missing. Please go to the config tab and enter the API key."
+        openrouter_key = ApiKeyManager.get_api_key("OPENROUTER_API_KEY")
+        if not openai_key and not gemini_key and not openrouter_key:
+            return "Your Genmini or OpenAI or OpenRouter key is missing. Please go to the config tab and enter the API key."
 
         pexels_api_key = ApiKeyManager.get_api_key("PEXELS_API_KEY")
         if not pexels_api_key:
@@ -95,7 +97,7 @@ class VideoAutomationUI(AbstractComponentUI):
                 else:
                     self.isVertical = "vertical" in message.lower() or "short" in message.lower()
                     self.state = Chatstate.ASK_VOICE_MODULE
-                    bot_message = "Which voice module do you want to use? Please type 'ElevenLabs' for high quality, 'EdgeTTS' for free medium quality voice."
+                    bot_message = "Which voice module do you want to use? Please type 'ElevenLabs' for high quality, 'EdgeTTS' for free medium quality voice, or 'TikTok' for TikTok TTS."
             elif self.state == Chatstate.ASK_VOICE_MODULE:
                 if "elevenlabs" in message.lower():
                     eleven_labs_key = ApiKeyManager.get_api_key("ELEVENLABS_API_KEY")
@@ -107,8 +109,15 @@ class VideoAutomationUI(AbstractComponentUI):
                 elif "edgetts" in message.lower():
                     self.voice_module = EdgeTTSVoiceModule
                     language_choices = [lang.value for lang in Language]
+                elif "tiktok" in message.lower():
+                    self.voice_module = TikTokVoiceModule
+                    bot_message = "TikTok TTS selected. Proceeding with default voice 'en_us_001'."
+                    self.state = Chatstate.ASK_LANGUAGE
+                    chat_history.append((message, bot_message))
+                    yield gr.update(value="", visible=inputVisible), gr.update(value=chat_history), gr.update(value=self.video_html, visible=self.videoVisible), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=True)
+                    return
                 else:
-                    bot_message = "Invalid voice module. Please type 'ElevenLabs' or 'EdgeTTS'."
+                    bot_message = "Invalid voice module. Please type 'ElevenLabs', 'EdgeTTS', or 'TikTok'."
                     return
                 self.state = Chatstate.ASK_LANGUAGE
                 bot_message = f"🌐What language will be used in the video?🌐 Choose from one of these ({', '.join(language_choices)})"
@@ -119,6 +128,8 @@ class VideoAutomationUI(AbstractComponentUI):
                     self.voice_module = ElevenLabsVoiceModule(ApiKeyManager.get_api_key('ELEVENLABS_API_KEY'), "Chris", checkElevenCredits=True)
                 elif self.voice_module == EdgeTTSVoiceModule:
                     self.voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[self.language]['male'])
+                elif self.voice_module == TikTokVoiceModule:
+                    self.voice_module = TikTokVoiceModule("en_us_001")
                 self.state = Chatstate.ASK_DESCRIPTION
                 bot_message = "Amazing 🔥 ! 📝Can you describe thoroughly the subject of your video?📝 I will next generate you a script based on that description"
             elif self.state == Chatstate.ASK_DESCRIPTION:

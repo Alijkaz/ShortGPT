@@ -72,7 +72,14 @@ from openai import OpenAI
 def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
     openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
     gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-    if gemini_key:
+    openrouter_key = ApiKeyManager.get_api_key("OPENROUTER_API_KEY")
+    if openrouter_key:
+        client = OpenAI( 
+            api_key=openrouter_key,
+            base_url="https://openrouter.ai/api/v1/"
+        )
+        model="deepseek/deepseek-chat-v3-0324:free"
+    elif gemini_key:
         client = OpenAI( 
             api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
